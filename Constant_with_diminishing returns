@@ -156,9 +156,9 @@ nsyn_fre$ratio<-nsyn_fre$Freq/length(cells)
 nsyn_fre_new <- merge(nsyn_fre,unique(nsyn),by="nsyn_loc_all",all=FALSE)
 nsyn_fre_new <- nsyn_fre_new[order(-nsyn_fre_new$Freq),]
 
-exname1<-paste(num,"_myfile_constant_0.1B_10^4_exp_b105_d50_1120g_dr5",sep="")
-exname2<-paste(num,"_constant_0.1B_10^4_exp_b105_d50_1120g_dr5_nsyn.xls",sep="")
-exname3<-paste(num,"_constant_0.1B_10^4_exp_b105_d50_1120g_dr5_syn.xls",sep="")
+exname1<-paste(num,"_myfile_constant_0.1B_10^4_exp_b105_d50_1120g_dr",sep="")
+exname2<-paste(num,"_constant_0.1B_10^4_exp_b105_d50_1120g_dr_nsyn.xls",sep="")
+exname3<-paste(num,"_constant_0.1B_10^4_exp_b105_d50_1120g_dr_syn.xls",sep="")
 write.table(nsyn_fre_new,file=exname2,append=FALSE,col.names=NA,sep="\t")
 write.table(syn_fre,file=exname3,append=FALSE,col.names=NA,sep="\t")
 save.image(exname1)
