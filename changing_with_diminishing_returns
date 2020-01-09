@@ -1,0 +1,341 @@
+
+for (num in 1:500){
+##############################dn&ds distribution#########################
+
+dn_site <- 6839923
+ds_site <- 2218684
+mutation_rate <- 4*10^-10
+dn_rate <- mutation_rate * dn_site
+ds_rate <- mutation_rate * ds_site
+
+
+sedist_dn <- function(){
+  sign<-rbinom(1,1,0.1) 
+  if (sign == 0){
+    list(fitness= 1-rexp(1,rate=50),location=ceiling(runif(1, 0, dn_site)))
+  }
+  else {
+    list(fitness=1+rexp(1,rate=105),location=ceiling(runif(1, 0, dn_site)))
+  }
+}
+
+
+sedist_ds <- function(){
+  list(fitness=1, location=ceiling(runif(1, 0, ds_site)))
+}
+
+
+
+############################ initial population #######################
+cell_int_num <- 10^4
+
+cell <- list(dn=c(), ds=c())
+
+
+cells <- list()
+for(i in 1:cell_int_num){
+  cells[[length(cells)+1]] <- cell
+}
+
+########################## transfer ################################
+
+transfer <- function(cells) {
+  sample(x = cells, size = cell_int_num, replace=F)
+}
+
+
+####################### division ##################################
+
+divi <- function(cell){
+    new_cells <- list()
+    if(rbinom(1, size = 1, prob=dn_rate)){
+       cell$dn <- c(cell$dn, list(sedist_dn()))
+    }
+    
+    if(rbinom(1, size = 1, prob=ds_rate)){
+      cell$ds <- c(cell$ds, list(sedist_ds()))
+    }
+
+    fitness <- prod(unlist(sapply(cell$dn, `[[`, "fitness")))
+    num_divi <- rpois(1,2*fitness)
+
+    if (num_divi > 0){
+     for (a in 1:num_divi){
+       new_cells <- c(new_cells,list(cell))
+     }
+      return(new_cells)
+    }
+ 
+}
+
+
+
+################ define new cells fitness when changing environment ##########################################
+################ 0% antagonism
+redist_dn_b <- function(){
+  sign <- rbinom(1,1,1)
+  if (sign == 0){
+    fitness = 1+(-rexp(1,rate=50))
+  }
+  else {
+    fitness=1+(rexp(1,rate=105))
+  }
+  return(fitness)
+}
+
+redist_dn_d <- function(){
+  sign <- rbinom(1,1,0)
+  if (sign == 0){
+    fitness = 1+(-rexp(1,rate=50))
+  }
+  else {
+    fitness= 1+(rexp(1,rate=105))
+  }
+  return(fitness)
+}
+
+################ 20% antagonism
+redist_dn_b <- function(){
+  sign <- rbinom(1,1,0.8)
+  if (sign == 0){
+    fitness = 1+(-rexp(1,rate=50))
+  }
+  else {
+    fitness=1+(rexp(1,rate=105))
+  }
+  return(fitness)
+}
+
+redist_dn_d <- function(){
+  sign <- rbinom(1,1,0.022)
+  if (sign == 0){
+    fitness = 1+(-rexp(1,rate=50))
+  }
+  else {
+    fitness= 1+(rexp(1,rate=105))
+  }
+  return(fitness)
+}
+
+################ 40% antagonism
+redist_dn_b <- function(){
+  sign <- rbinom(1,1,0.6)
+  if (sign == 0){
+    fitness = 1+(-rexp(1,rate=50))
+  }
+  else {
+    fitness=1+(rexp(1,rate=105))
+  }
+  return(fitness)
+}
+
+redist_dn_d <- function(){
+  sign <- rbinom(1,1,0.044)
+  if (sign == 0){
+    fitness = 1+(-rexp(1,rate=50))
+  }
+  else {
+    fitness= 1+(rexp(1,rate=105))
+  }
+  return(fitness)
+}
+
+################ 60% antagonism
+redist_dn_b <- function(){
+  sign <- rbinom(1,1,0.4)
+  if (sign == 0){
+    fitness = 1+(-rexp(1,rate=50))
+  }
+  else {
+    fitness=1+(rexp(1,rate=105))
+  }
+  return(fitness)
+}
+
+redist_dn_d <- function(){
+  sign <- rbinom(1,1,0.067)
+  if (sign == 0){
+    fitness = 1+(-rexp(1,rate=50))
+  }
+  else {
+    fitness= 1+(rexp(1,rate=105))
+  }
+  return(fitness)
+}
+
+################ 80% antagonism
+redist_dn_b <- function(){
+  sign <- rbinom(1,1,0.2)
+  if (sign == 0){
+    fitness = 1+(-rexp(1,rate=50))
+  }
+  else {
+    fitness=1+(rexp(1,rate=105))
+  }
+  return(fitness)
+}
+
+redist_dn_d <- function(){
+  sign <- rbinom(1,1,0.089)
+  if (sign == 0){
+    fitness = 1+(-rexp(1,rate=50))
+  }
+  else {
+    fitness= 1+(rexp(1,rate=105))
+  }
+  return(fitness)
+}
+
+###
+
+loc_fit_matrix <- function(cells){ 
+  loc_fit <- NULL
+  newfit<-NULL
+  for(cell in cells){
+    if (length(cell$dn) != 0){
+       for (j in 1:length(cell$dn)){
+           temp <- c(cell$dn[[j]]$location,cell$dn[[j]]$fitness)
+           loc_fit <- rbind(loc_fit,temp)
+       }
+    }
+  }
+  loc_fit <- unique(loc_fit)
+  row.names(loc_fit)<-c(1:nrow(loc_fit))
+  loc_fit<- as.data.frame(loc_fit)
+  for (i in 1:nrow(loc_fit)){
+    if (loc_fit[i,2] > 1){
+	   temp <- redist_dn_b()
+	}
+	else if(loc_fit[i,2] < 1){
+	   temp <- redist_dn_d()
+	}
+	else{
+	   temp <- 1
+	}
+    newfit<-rbind(newfit,temp)
+  }
+  
+  loc_fit <- cbind(loc_fit,newfit)
+  loc_fit<- as.data.frame(loc_fit)
+  row.names(loc_fit)<-c(1:nrow(loc_fit))
+  return(loc_fit)
+}
+
+total_loc_fit <- list()
+new_cells_function <- function(cells){
+  loc_fit <- loc_fit_matrix(cells)
+  total_loc_fit[[t]] <<- loc_fit
+  new_cells <- list() 
+  k <- 1  
+  for(cell in cells){
+    if (length(cell$dn) == 0){
+      new_cells[[k]]<- cell
+    }
+    else{
+      for (j in 1:length(cell$dn)){
+         for (i in 1:nrow(loc_fit)){
+           if (cell$dn[[j]]$location == loc_fit[i,1]){
+             cell$dn[[j]]$fitness <- loc_fit[i,3]
+             break
+           }
+         }
+      }
+	  new_cells[[k]]<- cell
+    }
+     k<- k+1	
+   }
+    
+  return (new_cells)
+}
+
+
+####################### trace fitness in each medium #######################    
+
+fitness <- function(nsyn){
+  fit_all<-NULL
+  for (i in 1:nrow(nsyn)){
+    fit_temp <- NULL
+    for (t in 1:5){
+      if (length(which(nsyn[i,1] == total_loc_fit[[t]]$V1)) == 0){
+        fit <- 0
+      }
+      else{
+        fit <- total_loc_fit[[t]][which(nsyn[i,1] == total_loc_fit[[t]]$V1),2]
+      }
+      fit_temp <- c(fit_temp,fit)
+    }
+    fit_all <- rbind(fit_all,fit_temp)
+  }
+  row.names(fit_all)<-c(1:nrow(fit_all))
+  nsyn_fit <- cbind(nsyn_fre,fit_all)
+}
+
+############################## run #################################
+
+ cells <- list()
+  for(i in 1:cell_int_num){
+    cells[[length(cells)+1]] <- cell
+  }
+
+  total <- list()
+  total_loc_fit <- list()
+  circle_count <- 224     
+  n <- 1
+  for (t in 1:5){
+   print (t)
+   for (i in 1:circle_count){
+      cells <- transfer(cells)
+	  dt_cells <- list()
+	  for (d in 1:length(cells)){
+	    dt_cells[[d]] <- divi(cells[[d]])
+	  }
+      cells <- unlist(dt_cells, recursive=FALSE)
+	  if ( i %% 112 == 0){
+	    total[[n]] <- cells
+		n <- n+1
+		print (i)
+	  }  
+   }
+      cells <- new_cells_function(cells)
+  }
+
+################################# output #################################################
+
+  syn_loc_all<-NULL
+  nsyn_loc_all<-NULL
+  
+  for (j in 1:length(cells)){
+    syn_loc<-unlist(sapply(cells[[j]]$ds, `[[`, "location"))
+    nsyn_loc<-unlist(sapply(cells[[j]]$dn, `[[`, "location"))
+    if (is.null(syn_loc)){}
+    else{
+      syn_loc_all<-c(syn_loc_all,syn_loc)
+    }
+    if (is.null(nsyn_loc)){}
+    else{
+      nsyn_loc_all<-c(nsyn_loc_all,nsyn_loc)
+    }
+  }
+ 
+  syn_fre<-as.data.frame(table(syn_loc_all))
+  nsyn_fre<-as.data.frame(table(nsyn_loc_all))
+  syn_fre$ratio<-syn_fre$Freq/length(cells)
+  syn_fre <- syn_fre[order(-syn_fre$Freq),]
+  nsyn_fre$ratio<-nsyn_fre$Freq/length(cells)
+  
+  nsyn_unique <- data.frame(as.vector(nsyn_fre[,1]))
+  nsyn_fit <- fitness(nsyn_unique)
+  nsyn_fit <- nsyn_fit[order(-nsyn_fit$Freq),]
+
+  exname1<-paste(num,"_myfile_changing_0.1B_10^4_224g_exp_b105_d50_1120g_nodr",sep="")
+  exname2<-paste(num,"_changing_0.1B_10^4_224g_exp_b105_d50_1120g_nodr_nsyn.xls",sep="")
+  exname3<-paste(num,"_changing_0.1B_10^4_224g_exp_b105_d50_1120g_nodr_syn.xls",sep="")
+  write.table(nsyn_fit,file=exname2,append=FALSE,col.names=NA,sep="\t")
+  write.table(syn_fre,file=exname3,append=FALSE,col.names=NA,sep="\t")
+  save.image(exname1)
+
+}
+
+
+
+
