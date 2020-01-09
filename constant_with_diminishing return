@@ -1,0 +1,166 @@
+
+for (num in 1:500){
+############################## dn&ds distribution #########################
+
+dn_site <- 6839923
+ds_site <- 2218684
+mutation_rate <- 4*10^-10
+dn_rate <- mutation_rate * dn_site
+ds_rate <- mutation_rate * ds_site
+
+
+sedist_dn <- function(){
+  sign<-rbinom(1,1,0.1) 
+  if (sign == 0){
+    list(fitness= 1-rexp(1,rate=50),location=ceiling(runif(1, 0, dn_site)))
+  }
+  else {
+    list(fitness=1+rexp(1,rate=105),location=ceiling(runif(1, 0, dn_site)))
+  }
+}
+
+sedist_ds <- function(){
+  list(fitness=1, location=ceiling(runif(1, 0, ds_site)))
+}
+
+############################ initial population #######################
+
+cell_int_num <- 10^4
+
+cell <- list(dn=c(), ds=c())
+
+
+cells <- list()
+for(i in 1:cell_int_num){
+  cells[[length(cells)+1]] <- cell
+}
+
+########################## transfer################################
+
+transfer <- function(cells) {
+  sample(x = cells, size = cell_int_num, replace=F)
+}
+
+############################ division_diminish_return #############################
+
+divi <- function(cell){
+    new_cells <- list()
+    if(rbinom(1, size = 1, prob=dn_rate)){
+        fitness <- prod(unlist(sapply(cell$dn, `[[`, "fitness")))
+         if (length(cell$dn) > 0){
+            bb <- sedist_dn()    #bb is a temp mutation
+            if (bb$fitness <= 1 ){
+              cell$dn <- c(cell$dn, list(bb))
+            }
+            else if(bb$fitness > 1){
+			  if (fitness < 1.05){
+                cell$dn <- c(cell$dn, list(bb))
+              }
+              else if (fitness >= 1.05) {
+				#bb$fitness <- 1+(bb$fitness-1)/(((fitness-1)*5)+1)      #weak diminishing return epistasis
+				#bb$fitness <- 1+(bb$fitness-1)/(((fitness-1)*10)+1)     #intermediate diminishing return epistasis
+				#bb$fitness <- 1+(bb$fitness-1)/(((fitness-1)*20)+1)     #strong diminishing return epistasis
+                cell$dn <- c(cell$dn, list(bb))
+              }
+			}
+         }
+        else{
+          cell$dn <- c(cell$dn, list(sedist_dn()))
+        }
+    }
+    
+    if(rbinom(1, size = 1, prob=ds_rate)){
+      cell$ds <- c(cell$ds, list(sedist_ds()))
+    }
+
+    fitness <- prod(unlist(sapply(cell$dn, `[[`, "fitness")))
+    num_divi <- rpois(1,2*fitness)
+
+    if (num_divi > 0){
+     for (a in 1:num_divi){
+       new_cells <- c(new_cells,list(cell))
+     }
+      return(new_cells)
+    }
+}
+
+
+############################# run ######################################
+
+dn_all<-NULL
+ds_all<-NULL
+
+
+
+circle_count <- 1120
+
+total <- list()
+n <- 1
+cells <- list()
+for(i in 1:cell_int_num){
+  cells[[length(cells)+1]] <- cell
+}
+
+for (i in 1:circle_count){
+    cells <- transfer(cells)
+	dt_cells <- list()
+	for (d in 1:length(cells)){
+	  dt_cells[[d]] <- divi(cells[[d]])
+	}
+    cells <- unlist(dt_cells, recursive=FALSE)
+
+	 if ( i %% 112 == 0){
+	    total[[n]] <- cells
+		n <- n+1
+		print (i)
+	  }  
+   }
+
+################################# output #################################################
+
+syn_loc_all<-NULL
+nsyn_loc_all<-NULL
+syn_fit_all<-NULL
+nsyn_fit_all<-NULL
+
+for (j in 1:length(cells)){
+  syn_loc<-unlist(sapply(cells[[j]]$ds, `[[`, "location"))
+  nsyn_loc<-unlist(sapply(cells[[j]]$dn, `[[`, "location"))
+  syn_fit<-unlist(sapply(cells[[j]]$ds, `[[`, "fitness"))
+  nsyn_fit<-unlist(sapply(cells[[j]]$dn, `[[`, "fitness"))
+  if (is.null(syn_loc)){}
+  else{
+    syn_loc_all<-c(syn_loc_all,syn_loc)
+    syn_fit_all<-c(syn_fit_all,syn_fit)
+  }
+  if (is.null(nsyn_loc)){}
+  else{
+    nsyn_loc_all<-c(nsyn_loc_all,nsyn_loc)
+    nsyn_fit_all<-c(nsyn_fit_all,nsyn_fit)
+  }
+}
+syn<-data.frame(as.vector(syn_loc_all),as.vector(syn_fit_all))
+colnames(syn)[1]<-"syn_loc_all"
+colnames(syn)[2]<-"syn_fit_all"
+nsyn<-data.frame(as.vector(nsyn_loc_all),as.vector(nsyn_fit_all))
+colnames(nsyn)[1]<-"nsyn_loc_all"
+colnames(nsyn)[2]<-"nsyn_fit_all"
+
+syn_fre<-as.data.frame(table(syn_loc_all))
+syn_fre <- syn_fre[order(-syn_fre$Freq),]
+nsyn_fre<-as.data.frame(table(nsyn_loc_all))
+nsyn_fre <- nsyn_fre[order(-nsyn_fre$Freq),]
+syn_fre$ratio<-syn_fre$Freq/length(cells)
+nsyn_fre$ratio<-nsyn_fre$Freq/length(cells)
+
+nsyn_fre_new <- merge(nsyn_fre,unique(nsyn),by="nsyn_loc_all",all=FALSE)
+nsyn_fre_new <- nsyn_fre_new[order(-nsyn_fre_new$Freq),]
+
+exname1<-paste(num,"_myfile_constant_0.1B_10^4_exp_b105_d50_1120g_dr5",sep="")
+exname2<-paste(num,"_constant_0.1B_10^4_exp_b105_d50_1120g_dr5_nsyn.xls",sep="")
+exname3<-paste(num,"_constant_0.1B_10^4_exp_b105_d50_1120g_dr5_syn.xls",sep="")
+write.table(nsyn_fre_new,file=exname2,append=FALSE,col.names=NA,sep="\t")
+write.table(syn_fre,file=exname3,append=FALSE,col.names=NA,sep="\t")
+save.image(exname1)
+}
+
